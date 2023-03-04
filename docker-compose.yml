@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: ${PROJECT_NAME}_postgres
+    image: postgres:latest
+    volumes:
+      - ./postgres/db:/var/lib/postgres
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - core
+
+  backend:
+    container_name: ${PROJECT_NAME}_backend
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    working_dir: /home/node/backend
+    env_file:
+      - .env
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    volumes:
+      - ./backend:/home/node/backend
+#      - /home/node/backend/node_modules
+#      - /home/node/backend/dist
+    depends_on:
+      - postgres
+    networks:
+      - core
+
+  nginx:
+    image: nginx:latest
+    container_name: ${PROJECT_NAME}_nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./backend/uploads:/var/www/html/uploads
+    env_file:
+      - .env
+    ports:
+      - 80:80
+    depends_on:
+      - postgres
+      - backend
+    networks:
+      - core
+
+networks:
+  core:
+    name: ${PROJECT_NAME}_network
+    driver: bridge
